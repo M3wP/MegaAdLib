@@ -28,10 +28,12 @@ VEC_CPU_NMI 		=	$FFFA
 
 .if 	DEF_RENE_TIMING_QTR
 ;118Hz
-VAL_REN_DEFTEMPO	=	508475
+;VAL_REN_DEFTEMPO	=	508475
+VAL_REN_DEFTEMPO	= 	(60 * 985248) / 118
 .else
 ;472Hz
-VAL_REN_DEFTEMPO	=	127119
+;VAL_REN_DEFTEMPO	=	127119
+VAL_REN_DEFTEMPO	= 	(60 * 985248) / 472
 .endif
 
 
@@ -203,6 +205,12 @@ cntRenMusTick:
 	.byte		$00
 valRenMusTimr:
 	.word		$0000
+flgRenLoop:
+	.byte		$00
+valRenMusOffs:
+	.word		$0093
+valRenLoopOffs:
+	.word		$0000
 
 ;Last status byte for running status
 valRenLstS:
@@ -286,7 +294,7 @@ main:
 		JSR	resetSong
 		JSR	loadSong
 
-		JMP	@update
+		JMP	@doplay
 
 @tstkeys:
 		LDA	$D610
@@ -398,7 +406,7 @@ resetSong:
 @cont0:
 		LDA	#$00
 		STA	flgRenPlay
-		STA	flgRenRsrt
+;		STA	flgRenRsrt
 
 		STA	valRenLstS
 
@@ -626,6 +634,33 @@ loadPatches:
 		JSR	miniCloseFile
 	.endif
 
+		LDZ	#$04
+		NOP
+		LDA	(ptrPatchData), Z
+		STA	flgRenLoop
+		INZ
+
+		NOP
+		LDA	(ptrPatchData), Z
+		STA	valRenLoopOffs
+		INZ
+		NOP
+		LDA	(ptrPatchData), Z
+		STA	valRenLoopOffs + 1
+
+		LDA	#$93
+		STA	valRenMusOffs
+		LDA	#$00
+		STA valRenMusOffs + 1
+
+		CLC
+		LDA	valRenMusOffs
+		ADC	valRenLoopOffs
+		STA	valRenLoopOffs
+		LDA	valRenMusOffs + 1
+		ADC	valRenLoopOffs + 1
+		STA	valRenLoopOffs + 1
+
 		CLI
 		RTS
 
@@ -717,14 +752,26 @@ loadSong:
 
 ;		__REN_MOV_MEM32_MEM32 cntRenNEvt, valRenBuf0
 
+		LDA	flgRenRsrt
+		BEQ	@start
+
+		LDA	#$00
+		BRA	@cont0
+
+@start:
 		LDA	#$28
+@cont0:
 		STA	cntRenNEvt
+
 		LDA	#$00
 		STA	cntRenNEvt + 1
 		STA	cntRenNEvt + 2
 		STA	cntRenNEvt + 3
 
 @done:
+		LDA	#$00
+		STA	flgRenRsrt
+
 		LDA	#$01
 		STA	flgRenLoad
 		STA	flgRenDirty
@@ -828,10 +875,11 @@ readVariLen:
 ;-----------------------------------------------------------
 findTrack:
 ;-----------------------------------------------------------
-		LDA	#$93
+		LDA	valRenMusOffs
 		STA	valRenBuf0
-		LDA	#$00
+		LDA	valRenMusOffs + 1
 		STA	valRenBuf0 + 1
+		LDA	#$00
 		STA	valRenBuf0 + 2
 		STA	valRenBuf0 + 3
 
@@ -1093,25 +1141,25 @@ plyrIRQ:
 		__REN_MOV_MEM32_MEM32 cntRenNEvt, valRenBuf0
 
 		LDZ	#$00
+
+
+.if		DEF_RENE_TIMING_QTR
 		NEG
 		NEG
 		LDA	cntRenNEvt
 		NEG
 		NEG
 		LSR
-
-.if		DEF_RENE_TIMING_QTR
 		NEG
 		NEG
 		LSR
-		NEG
-		NEG
-		LSR
-.endif
-
+;		NEG
+;		NEG
+;		LSR
 		NEG
 		NEG
 		STA	cntRenNEvt
+.endif
 
 ;		LDA	cntRenNEvt
 ;		ORA	cntRenNEvt + 1
@@ -1189,6 +1237,20 @@ plyrIRQ:
 		RTI
 
 @fail0:
+		LDA	flgRenLoop
+		BNE	@stop0
+
+		LDA	valRenLoopOffs
+		STA	valRenMusOffs
+		LDA	valRenLoopOffs + 1
+		STA	valRenMusOffs + 1
+
+		LDA	#$01
+		STA	flgRenRsrt
+		JMP	@done
+
+
+@stop0:
 		JSR	benitoStop
 
 		LDA	#$00
