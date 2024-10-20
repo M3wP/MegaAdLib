@@ -2,7 +2,7 @@
 
 ;	Determine whether MID loading is from D81 or SDC.
 	.define		DEF_RENE_USEMINI	0
-	.define		DEF_RENE_TIMING_QTR	1
+	.define		DEF_RENE_TIMING_QTR	0
 
 	.feature	leading_dot_in_identifiers, loose_string_term
 
@@ -29,11 +29,13 @@ VEC_CPU_NMI 		=	$FFFA
 .if 	DEF_RENE_TIMING_QTR
 ;118Hz
 ;VAL_REN_DEFTEMPO	=	508475
-VAL_REN_DEFTEMPO	= 	(60 * 985248) / 118
+;	944 Hz (2x472) / 96 ppq * 60 s = 590 bpm / 4 = 148
+VAL_REN_DEFTEMPO	= 	(60 * 985248) / 148;		118;	142 ;	;157
 .else
 ;472Hz
 ;VAL_REN_DEFTEMPO	=	127119
-VAL_REN_DEFTEMPO	= 	(60 * 985248) / 472
+;	944 Hz (2x472) / 96 ppq * 60 s = 590 bpm
+VAL_REN_DEFTEMPO	= 	(60 * 985248) / 590;
 .endif
 
 
@@ -742,6 +744,8 @@ loadSong:
 		LDA	(ptrPatchData), Z
 		STA	cntRenMusTick
 
+		STA	valBenDbg0
+
 		LDA	#$00
 		STA	valRenMusTimr
 		STA	valRenMusTimr + 1
@@ -759,7 +763,11 @@ loadSong:
 		BRA	@cont0
 
 @start:
-		LDA	#$28
+.if		DEF_RENE_TIMING_QTR
+		LDA	#$14
+.else
+		LDA	#$50
+.endif
 @cont0:
 		STA	cntRenNEvt
 
