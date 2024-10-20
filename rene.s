@@ -1729,27 +1729,14 @@ setRightLVolume:
 
 
 mixervals:
-	.byte $1c, $C0, $1d, $C0 ; OPL_FM LFT
-	.byte $3c, $C0, $3d, $C0 ; OPL_FM RGT
-	.byte $dc, $C0, $dd, $C0 ; OPL_FM HDL
-	.byte $fc, $C0, $fd, $C0 ; OPL_FM HDR
+	.byte $1c, $DC, $1d, $FF ; OPL_FM LFT
+	.byte $3c, $DC, $3d, $FF ; OPL_FM RGT
+	.byte $dc, $DC, $dd, $FF ; OPL_FM HDL
+	.byte $fc, $DC, $fd, $FF ; OPL_FM HDR
 
 ;-----------------------------------------------------------
 initAudio:
 ;-----------------------------------------------------------
-		LDY	#$00
-@loop0:
-		LDX	mixervals, Y
-		LDA mixervals + 1, Y
-		JSR	setCoefficient
-		INY
-		INY
-		CPY	#$10
-		BNE	@loop0
-
-		RTS
-
-
 		LDX	#$00
 		LDA	#$00
 @loop:
@@ -1815,6 +1802,20 @@ initAudio:
 		LDX	#$E3
 		LDA	valMnchMsVol + 1
 		JSR	setCoefficient
+
+
+
+
+		LDY	#$00
+@loop0:
+		LDX	mixervals, Y
+		LDA mixervals + 1, Y
+		JSR	setCoefficient
+		INY
+		INY
+		CPY	#$10
+		BNE	@loop0
+
 
 		RTS
 
